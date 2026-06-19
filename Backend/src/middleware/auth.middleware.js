@@ -1,61 +1,29 @@
 const jwt = require("jsonwebtoken");
+const ApiError = require("../utils/ApiError");
 
-
-async function authArtist(req, res, next) {
-
+function auth(req, res, next) {
     const token = req.cookies.token;
 
     if (!token) {
-        return res.status(401).json({ message: "Unauthorized" })
+        throw new ApiError(401, "Unauthorized");
     }
 
     try {
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
-
-        if (decoded.role !== "artist") {
-            return res.status(403).json({ message: "You don't have access" })
-        }
-
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded;
-
-        next()
-
-    }
-    catch (err) {
-        console.log(err);
-        return res.status(401).json({ message: "Unauthorized" })
-    }
-
-}
-
-async function authUser(req, res, next) {
-
-    const token = req.cookies.token;
-
-    if (!token) {
-        res.status(401).json({ message: "Unauthorized" })
-    }
-
-    try {
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
-
-        if (decoded.role !== "user") {
-            return res.status(403).json({ message: "You don't have access" })
-        }
-
-        req.user = decoded;
-
-        next()
-
-
+        next();
     } catch (err) {
-        console.log(err);
-        return res.status(401).json({ message: "Unauthorized" })
+        throw new ApiError(401, "Unauthorized");
     }
-
 }
 
+function requireRole(...roles) {
+    return (req, res, next) => {
+        if (!roles.includes(req.user.role)) {
+            throw new ApiError(403, "You don't have access");
+        }
+        next();
+    };
+}
 
-module.exports = { authArtist, authUser }
+module.exports = { auth, requireRole };
