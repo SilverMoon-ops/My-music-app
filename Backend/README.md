@@ -47,6 +47,11 @@ Backend/
     check-duplicates.js   one-off script: checks for case-insensitive
                            duplicate usernames/emails/titles before deploying
                            schema changes that add uniqueness constraints
+  tests/
+    auth.test.js           registration, login, case-insensitive uniqueness
+    music.test.js          uploads, albums, ownership, storage lifecycle
+    dbHandler.js            in-memory MongoDB setup/teardown for tests
+    setupEnv.js              test environment variables
 ```
 
 ## Account types
@@ -100,7 +105,9 @@ Errors follow the same shape with `success: false`.
 | GET | `/me` | cookie | — | returns the logged-in user's profile |
 
 Username/email matching is case-insensitive (`"Rahul"` and `"rahul"` are the
-same account). Rate-limited at 20 requests / 15 min per IP on this whole route group.
+same account). Duplicate registration returns a field-specific message
+(`"Username already taken"` or `"Email already in use"`). Rate-limited at
+20 requests / 15 min per IP on this whole route group.
 
 ### Music & Albums — `/api/music`
 
@@ -123,17 +130,32 @@ Track and album titles are unique per-artist (case/whitespace-insensitive) —
 you can't have two tracks named "Test" and "test", but two different artists
 both can.
 
-## What's implemented vs. what's not (as of Phase 8)
+## What's implemented (all 9 phases complete)
 
 **Done:** auth (both roles), security hardening, data integrity constraints,
 full CRUD on tracks/albums with ownership checks, ImageKit upload/delete
-lifecycle (including orphaned-file cleanup if a DB save fails after upload).
+lifecycle (including orphaned-file cleanup if a DB save fails after upload),
+clean project structure, full documentation, and an automated test suite.
 
-**Not yet implemented:** automated tests (Phase 9, in progress). There is
-currently no test suite — all verification so far has been manual, via
-Postman and direct testing. Treat this backend as functionally solid but
-not yet regression-protected; changes should be manually re-verified against
-the API Reference above until tests exist.
+**Test suite (Phase 9):** 23 integration tests using Jest + Supertest +
+mongodb-memory-server — runs against a real, temporary, in-memory MongoDB
+instance, with ImageKit fully mocked (no test ever touches your real
+ImageKit account or your real database).
+
+```bash
+npm test
+```
+
+First run takes a little longer (downloads a small MongoDB test binary,
+cached afterward). Covers: registration/login including the case-insensitive
+uniqueness behavior, album referential/ownership integrity, cross-artist
+edit/delete blocking, the storage delete lifecycle, and the `validateId`
+middleware.
+
+This is coverage of the business-rule-critical paths from Phases 4–6, not
+exhaustive line coverage — e.g. the rename (`PATCH`) endpoints are covered
+for ownership-blocking but not every field-update edge case. Good habit
+going forward: when you add a new feature, add a test alongside it.
 
 ## Useful one-off scripts
 
