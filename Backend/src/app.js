@@ -8,8 +8,6 @@ const authRoutes = require("./routes/auth.routes");
 const musicRoutes = require("./routes/music.routes");
 const { notFound, errorHandler } = require("./middleware/error.middleware");
 
-require("./models/user.model");
-
 const app = express();
 
 app.use(helmet());

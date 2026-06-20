@@ -15,7 +15,22 @@ function errorHandler(err, req, res, next) {
 
     if (err.code === 11000) {
         statusCode = 409;
-        message = "Duplicate field value";
+
+        // err.keyPattern tells us which index was violated. For a compound
+        // index (e.g. { artist: 1, titleNormalized: 1 }), the field we
+        // actually care about for messaging isn't necessarily the FIRST
+        // key — so check membership across all keys, not just keyPattern[0].
+        const fields = err.keyPattern ? Object.keys(err.keyPattern) : [];
+
+        if (fields.includes("usernameLower")) {
+            message = "Username already taken";
+        } else if (fields.includes("email")) {
+            message = "Email already in use";
+        } else if (fields.includes("titleNormalized")) {
+            message = "You already have an item with this title";
+        } else {
+            message = "Duplicate field value";
+        }
     }
 
     if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {

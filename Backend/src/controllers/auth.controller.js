@@ -16,12 +16,20 @@ function signToken(user) {
 async function registerAccount(req, res, role) {
     const { username, email, password } = req.body;
 
+    const usernameLower = username.trim().toLowerCase();
+    const emailLower = email.trim().toLowerCase();
+
+    // Look up using the normalized forms so "Rahul"/"rahul" and
+    // "User@Mail.com"/"user@mail.com" are correctly treated as the same identity.
     const existing = await userModel.findOne({
-        $or: [{ username }, { email }],
+        $or: [{ usernameLower }, { email: emailLower }],
     });
 
     if (existing) {
-        throw new ApiError(409, "Account already exists");
+        if (existing.usernameLower === usernameLower) {
+            throw new ApiError(409, "Username already taken");
+        }
+        throw new ApiError(409, "Email already in use");
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -61,9 +69,13 @@ async function registerArtist(req, res) {
 async function loginAccount(req, res, expectedRole) {
     const { username, email, password } = req.body;
 
-    const user = await userModel.findOne({
-        $or: [{ username }, { email }],
-    });
+    // Only build conditions for fields that were actually provided,
+    // and normalize them the same way they're stored.
+    const orConditions = [];
+    if (username) orConditions.push({ usernameLower: username.trim().toLowerCase() });
+    if (email) orConditions.push({ email: email.trim().toLowerCase() });
+
+    const user = await userModel.findOne({ $or: orConditions });
 
     if (!user) {
         throw new ApiError(401, "Invalid credentials");

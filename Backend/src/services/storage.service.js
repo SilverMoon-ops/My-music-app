@@ -20,4 +20,23 @@ async function uploadFile(file) {
   return result;
 }
 
-module.exports = { uploadFile };
+async function deleteFile(fileId) {
+  if (!fileId) {
+    return;
+  }
+
+  try {
+    await ImageKitClient.deleteFile(fileId);
+  } catch (err) {
+    // If the file was already gone (e.g. someone deleted it manually from
+    // the ImageKit dashboard), treat that as success — the end state we
+    // actually care about, "file no longer exists", is already true.
+    const status = err?.$ResponseMetadata?.statusCode || err?.statusCode;
+    if (status === 404) {
+      return;
+    }
+    throw err;
+  }
+}
+
+module.exports = { uploadFile, deleteFile };
